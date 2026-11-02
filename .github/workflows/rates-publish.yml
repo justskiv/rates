@@ -1,0 +1,118 @@
+# Hourly publication of the rates files.
+#
+# Builds ratesjob from the protected release tag in the repository variable
+# RATES_JOB_REF, runs it over checkouts of the data and archive branches,
+# verifies the tree and pushes the bot-owned paths with the job's own
+# GITHUB_TOKEN. No secrets. Triggers are schedule and workflow_dispatch
+# only: nothing from a pull request can reach the write token.
+name: rates-publish
+
+on:
+  schedule:
+    - cron: "17 * * * *" # hourly publish; odd minute, the top of the hour lags most
+    - cron: "47 3 1 * *" # monthly keepalive, see job keepalive
+  workflow_dispatch: {} # needs write access to the repository: owner only
+
+permissions: {} # every job states its own minimum
+
+concurrency:
+  group: rates-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.event.schedule != '47 3 1 * *'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write # push to data/archive; rulesets keep main and rates-v* tags out of reach
+    steps:
+      - name: require a release tag
+        env:
+          RATES_JOB_REF: ${{ vars.RATES_JOB_REF }}
+        run: |
+          case "$RATES_JOB_REF" in
+            rates-v*) ;;
+            *) echo "::error::repository variable RATES_JOB_REF must name a rates-v* tag, got '$RATES_JOB_REF'"; exit 1 ;;
+          esac
+
+      - name: checkout job source at the release tag
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          ref: ${{ vars.RATES_JOB_REF }}
+          path: src
+          persist-credentials: false
+
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version-file: src/go.mod
+          check-latest: true # latest 1.27.x patch: stdlib security fixes
+          cache: false # stdlib-only binary builds in seconds; no cache to poison
+
+      - name: build
+        env:
+          RATES_JOB_REF: ${{ vars.RATES_JOB_REF }}
+        run: |
+          rev=$(git -C src rev-parse --short HEAD)
+          go build -C src -trimpath \
+            -ldflags "-X main._version=${RATES_JOB_REF}+${rev}" \
+            -o "$RUNNER_TEMP/ratesjob" ./cmd/ratesjob
+          "$RUNNER_TEMP/ratesjob" version
+
+      - name: checkout data branch
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          ref: data
+          path: data
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: checkout archive branch
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          ref: archive
+          path: archive
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: run # the job binary sees no token, on disk or in env
+        run: |
+          "$RUNNER_TEMP/ratesjob" run \
+            --public data --state archive/state --archive archive/raw \
+            --overrides archive/overrides.json --precompress=false
+          "$RUNNER_TEMP/ratesjob" verify --dir data
+
+      - name: push # the only step that sees the token
+        id: push
+        env:
+          TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          export REMOTE="https://x-access-token:${TOKEN}@github.com/${REPO}.git"
+          # archive first: if we die between pushes, the state is saved and the data follows
+          src/deploy/push.sh archive archive state raw
+          src/deploy/push.sh data data v1
+
+      - name: purge jsDelivr
+        if: steps.push.outputs.latest_changed == 'true'
+        env:
+          REPO: ${{ github.repository }}
+        run: |
+          curl -fsS --max-time 10 \
+            "https://purge.jsdelivr.net/gh/${REPO}@data/v1/latest.json" || true
+
+  keepalive:
+    # Scheduled workflows of a public repository stop after 60 days without
+    # repository activity. Re-enabling monthly is a cheap extra layer; the
+    # real guard is the rates-run-stale alert.
+    if: github.event.schedule == '47 3 1 * *'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    permissions:
+      actions: write # nothing else
+    steps:
+      - name: re-enable rates-publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: gh api -X PUT "repos/${REPO}/actions/workflows/rates-publish.yml/enable"

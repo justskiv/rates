@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rates.tuzov.dev/schema/rates-v1.json",
+  "title": "Currency rates snapshot, schema v1",
+  "description": "Shape of /v1/latest.json, /v1/history/YYYY/YYYY-MM-DD.json and the bundled snapshot (contracts/fixtures/rates-snapshot.json). Backend liveness is reported by the static /v1/health.json (rates-backend-design.md §4.9), not by this document. Rates are units of the currency per 1 unit of base (USD). Cross rate from A to B = rates[B] / rates[A]. Additive changes (new optional fields, new flag values) keep schemaVersion 1; clients MUST ignore unknown fields and unknown flag values. A breaking change bumps schemaVersion and is published side by side under a new path (/v2/latest.json).",
+  "type": "object",
+  "required": ["schemaVersion", "base", "asOf", "rates"],
+  "properties": {
+    "schemaVersion": {
+      "description": "Wire format version. Clients accept only the versions they know.",
+      "const": 1
+    },
+    "base": {
+      "description": "Base currency of all rates. Fixed to USD in v1.",
+      "const": "USD"
+    },
+    "asOf": {
+      "description": "Observation time of the rates in UTC. Day-granular sources (Frankfurter) give the most common observation date across currencies at 00:00:00Z. Not the publication time: it can legitimately lag by 1-3 days around weekends and holidays.",
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+    },
+    "generatedAt": {
+      "description": "Optional. UTC time when the backend produced this document. Changes only when the content changes, so ETag stays stable between identical runs. Backend liveness is reported by /v1/health.json, not by this field.",
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+    },
+    "source": {
+      "description": "Optional. Identifier of the primary source, e.g. \"frankfurter-v2-blend\". Informational; shown in the About sheet.",
+      "type": "string",
+      "maxLength": 64
+    },
+    "rates": {
+      "description": "ISO 4217 code -> units per 1 USD. Positive finite numbers, at most ~7 significant digits from the proxy. The base may be present with value 1; if absent, clients treat it as 1. Codes missing here are kept by the client from its previous table and marked stale.",
+      "type": "object",
+      "minProperties": 100,
+      "propertyNames": { "pattern": "^[A-Z]{3}$" },
+      "additionalProperties": { "type": "number", "exclusiveMinimum": 0 }
+    },
+    "flags": {
+      "description": "Optional. Per-currency quality flags. Known values: pegged (hard peg applied from the peg table), disputed (sources disagree by more than the threshold), secondary (value from a non-primary source), multiRate (on-site rate may differ substantially from the official one), held (a suspicious jump was rejected, the previous value is kept), stale (no fresh value from any publishable source, the last known value is carried forward), override (manual override). Clients ignore unknown values.",
+      "type": "object",
+      "propertyNames": { "pattern": "^[A-Z]{3}$" },
+      "additionalProperties": {
+        "type": "array",
+        "minItems": 1,
+        "uniqueItems": true,
+        "items": { "type": "string", "pattern": "^[a-z][A-Za-z0-9]{1,31}$" }
+      }
+    },
+    "alt": {
+      "description": "Optional. Alternative published rates for currencies with several official segments, e.g. CUP floating rate of the Central Bank of Cuba. Not used for conversion in v1; may be shown as a note.",
+      "type": "object",
+      "propertyNames": { "pattern": "^[A-Z]{3}$" },
+      "additionalProperties": {
+        "type": "object",
+        "required": ["rate", "label"],
+        "properties": {
+          "rate": { "type": "number", "exclusiveMinimum": 0 },
+          "label": { "type": "string", "pattern": "^[a-z][a-z0-9_]{1,31}$" }
+        },
+        "additionalProperties": true
+      }
+    },
+    "endpoints": {
+      "description": "Optional. Extra wire-v1 URLs that clients append to their cascade after the compiled mirror and before Frankfurter. Clients accept this field only from the primary host (first in their compiled list), never from mirrors; they keep it in fetch.json and replace it with the next primary response. Empty or absent in v1; this is how a future mirror reaches installed apps without a release.",
+      "type": "array",
+      "maxItems": 3,
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^https://", "maxLength": 200 }
+    },
+    "revised": {
+      "description": "Optional. Only in corrected history files: UTC time of the correction. History files are written once at UTC day close and are otherwise immutable.",
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+    }
+  },
+  "additionalProperties": true,
+  "examples": [
+    {
+      "schemaVersion": 1,
+      "base": "USD",
+      "asOf": "2026-11-01T00:00:00Z",
+      "generatedAt": "2026-11-01T19:07:12Z",
+      "source": "frankfurter-v2-blend",
+      "rates": { "USD": 1, "EUR": 0.89478, "JPY": 157.66, "KZT": 453.59, "RUB": 80.67, "AED": 3.6725 },
+      "flags": { "AED": ["pegged"], "VES": ["multiRate"], "SDG": ["disputed", "multiRate"] },
+      "alt": { "CUP": { "rate": 768, "label": "bcc_floating" } }
+    }
+  ]
+}

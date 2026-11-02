@@ -1,0 +1,92 @@
+version: '3'
+
+vars:
+  GOLANGCI_LINT: go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.15.0
+  GOVULNCHECK: go run golang.org/x/vuln/cmd/govulncheck@v1.9.0
+  FUZZTIME: '{{.FUZZTIME | default "30s"}}'
+  OUT: out
+  VERSION:
+    sh: git describe --tags --match 'rates-v*' --always --dirty 2>/dev/null || echo dev
+
+tasks:
+  contracts:check:
+    desc: Fail when contracts/ was edited by hand (SHA256SUMS mismatch)
+    cmds:
+      - go test ./contracts -count=1
+
+  test:
+    desc: Run all tests
+    cmds:
+      - go test ./...
+
+  test:race:
+    desc: Run all tests with the race detector
+    cmds:
+      - go test -race ./...
+
+  golden:update:
+    desc: Rewrite the merge golden files (review the diff afterwards)
+    cmds:
+      - go test ./internal/merge -run TestGolden -update
+
+  fuzz:
+    desc: Run every fuzz target for FUZZTIME (default 30s)
+    cmds:
+      - for: [FuzzFrankfurter, FuzzFawaz, FuzzERAPI]
+        cmd: go test ./internal/source -run '^$' -fuzz '^{{.ITEM}}$' -fuzztime {{.FUZZTIME}}
+      - go test ./internal/merge -run '^$' -fuzz '^FuzzMerge$' -fuzztime {{.FUZZTIME}}
+
+  lint:
+    desc: go vet and golangci-lint v2 (depguard keeps the binary stdlib-only)
+    cmds:
+      - go vet ./...
+      - '{{.GOLANGCI_LINT}} run ./...'
+      - '{{.GOLANGCI_LINT}} fmt --diff ./...'
+
+  vuln:
+    desc: govulncheck (pass VULNDB=file:///path for an offline database)
+    cmds:
+      - '{{.GOVULNCHECK}} {{if .VULNDB}}-db {{.VULNDB}}{{end}} ./...'
+
+  check:
+    desc: Everything CI runs
+    cmds:
+      - task: contracts:check
+      - task: lint
+      - task: test:race
+      - go mod tidy -diff
+      - task: vuln
+
+  build:
+    desc: Static linux/amd64 binary in bin/
+    env:
+      CGO_ENABLED: '0'
+      GOOS: linux
+      GOARCH: amd64
+    cmds:
+      - go build -trimpath -ldflags "-s -w -X main._version={{.VERSION}}" -o bin/ratesjob ./cmd/ratesjob
+
+  run:local:
+    desc: One run against the live sources into ./out (publish workflow layout, no .gz)
+    cmds:
+      - >-
+        go run ./cmd/ratesjob run
+        --public {{.OUT}}/data --state {{.OUT}}/archive/state
+        --archive {{.OUT}}/archive/raw --overrides {{.OUT}}/archive/overrides.json
+        --precompress={{.PRECOMPRESS | default "false"}}
+
+  verify:local:
+    desc: Check ./out/public with the job's rules and against rates.schema.json
+    cmds:
+      - go run ./cmd/ratesjob verify --dir {{.OUT}}/data
+      - RATES_VERIFY_DIR="$(pwd)/{{.OUT}}/data" go test ./internal/job -run TestVerifyDirAgainstSchema -count=1 -v
+
+  test:push:
+    desc: Exercise deploy/push.sh against a temporary bare repository
+    cmds:
+      - bash deploy/push_test.sh
+
+  clean:
+    desc: Remove local outputs
+    cmds:
+      - rm -rf {{.OUT}} bin

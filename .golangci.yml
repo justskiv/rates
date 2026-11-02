@@ -1,0 +1,70 @@
+version: "2"
+
+run:
+  tests: true
+
+linters:
+  default: none
+  enable:
+    - bodyclose
+    - depguard
+    - errcheck
+    - errorlint
+    - govet
+    - ineffassign
+    - misspell
+    - nilerr
+    - revive
+    - staticcheck
+    - unconvert
+    - unparam
+    - unused
+  settings:
+    depguard:
+      rules:
+        # The binary is stdlib-only; tests may use the schema validator.
+        stdlib-only:
+          files:
+            - "!$test"
+            - "!**/internal/fixture/**"
+          allow:
+            - $gostd
+            - github.com/justskiv/rates
+        tests:
+          files:
+            - $test
+          allow:
+            - $gostd
+            - github.com/justskiv/rates
+            - github.com/santhosh-tekuri/jsonschema/v6
+    errcheck:
+      check-type-assertions: true
+    govet:
+      enable-all: true
+      disable:
+        - fieldalignment
+        - shadow
+    revive:
+      rules:
+        - name: exported
+        - name: error-strings
+        - name: error-naming
+        - name: receiver-naming
+        - name: var-naming
+        - name: unexported-return
+        - name: indent-error-flow
+        - name: errorf
+        - name: context-as-argument
+  exclusions:
+    generated: strict
+    presets:
+      - std-error-handling
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/justskiv/rates

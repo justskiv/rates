@@ -1,0 +1,167 @@
+abort: -
+asOf: 2026-11-01T00:00:00Z
+published: 153
+
+warnings:
+  jump_held KPW prev 130.02, new 900.13, delta 5.923, runs 1/6
+  jump_held SYP prev 121.78, new 13003.9, delta 105.782, runs 1/6
+  primary_source_down frankfurter 
+
+pending:
+  KPW value=900.13 runs=1
+  SYP value=13003.9 runs=1
+
+decisions:
+  AED 3.6725 peg [pegged]
+  AFN 65.0105 secondary [secondary] primary has no value
+  ALL 81.513 secondary [secondary] primary has no value
+  AMD 360.625 secondary [secondary] primary has no value
+  AOA 924.503 secondary [secondary] primary has no value
+  ARS 1535.35 secondary [secondary] primary has no value
+  AUD 1.42262 secondary [secondary] primary has no value
+  AWG 1.79 peg [pegged]
+  AZN 1.7009 secondary [secondary] primary has no value
+  BAM 1.745643 crossPeg [pegged]
+  BBD 2 peg [pegged]
+  BDT 124.308 secondary [secondary] primary has no value
+  BHD 0.376 peg [pegged]
+  BIF 2996.72 secondary [secondary] primary has no value
+  BMD 1 peg [pegged]
+  BND 1.27822 secondary [secondary] primary has no value
+  BOB 12.1196 secondary [secondary] primary has no value
+  BRL 5.40631 secondary [secondary] primary has no value
+  BSD 1 peg [pegged]
+  BTN 95.0069 crossPeg [pegged]
+  BWP 13.9262 secondary [secondary] primary has no value
+  BYN 2.94248 secondary [secondary] primary has no value
+  BZD 2 peg [pegged]
+  CAD 1.39695 secondary [secondary] primary has no value
+  CDF 2272.99 secondary [secondary] primary has no value
+  CHF 0.824181 secondary [secondary] primary has no value
+  CLP 993.683 secondary [secondary] primary has no value
+  CNY 6.65644 secondary [secondary] primary has no value
+  COP 3201.17 secondary [secondary] primary has no value
+  CRC 452.933 secondary [secondary] primary has no value
+  CUP 24 peg [multiRate pegged]
+  CVE 98.41515 crossPeg [pegged]
+  CZK 21.8131 secondary [secondary] primary has no value
+  DJF 177.721 peg [pegged]
+  DKK 6.6949 secondary [secondary] primary has no value
+  DOP 60.3932 secondary [secondary] primary has no value
+  DZD 135.829 secondary [secondary] primary has no value
+  EGP 55.9968 secondary [secondary] primary has no value
+  ERN 15 peg [pegged]
+  ETB 161.328 secondary [multiRate secondary] primary has no value
+  EUR 0.892533 secondary [secondary] primary has no value
+  FJD 2.24771 secondary [secondary] primary has no value
+  FKP 0.746493 crossPeg [pegged]
+  GBP 0.746493 secondary [secondary] primary has no value
+  GEL 2.59503 secondary [secondary] primary has no value
+  GHS 11.6427 secondary [secondary] primary has no value
+  GIP 0.746493 crossPeg [pegged]
+  GMD 74.0563 secondary [secondary] primary has no value
+  GNF 8848.18 secondary [secondary] primary has no value
+  GTQ 7.64198 secondary [secondary] primary has no value
+  GYD 209.427 secondary [secondary] primary has no value
+  HKD 7.8452 secondary [secondary] primary has no value
+  HNL 26.9531 secondary [secondary] primary has no value
+  HTG 131.384 secondary [secondary] primary has no value
+  HUF 327.933 secondary [secondary] primary has no value
+  IDR 18105.5 secondary [secondary] primary has no value
+  ILS 3.11334 secondary [secondary] primary has no value
+  INR 95.0069 secondary [secondary] primary has no value
+  IQD 1514.18 secondary [secondary] primary has no value
+  IRR 1868680 secondary [disputed multiRate secondary] primary has no value
+  ISK 121.725 secondary [secondary] primary has no value
+  JMD 158.747 secondary [secondary] primary has no value
+  JOD 0.709 peg [pegged]
+  JPY 157.573 secondary [secondary] primary has no value
+  KES 129.932 secondary [secondary] primary has no value
+  KGS 87.4552 secondary [secondary] primary has no value
+  KHR 4080.99 secondary [secondary] primary has no value
+  KMF 439.0975 crossPeg [pegged]
+  KPW 130.02 carried [held] jump held: prev 130.02, new 900.13, delta 5.923, runs 1/6
+  KRW 1336 secondary [secondary] primary has no value
+  KWD 0.310509 secondary [secondary] primary has no value
+  KYD 0.8333333 peg [pegged]
+  KZT 453.674 secondary [secondary] primary has no value
+  LAK 22463.8 secondary [secondary] primary has no value
+  LBP 89882.9 secondary [secondary] primary has no value
+  LKR 332.557 secondary [secondary] primary has no value
+  LRD 170.222 secondary [secondary] primary has no value
+  LSL 16.6842 crossPeg [pegged]
+  LYD 6.42718 secondary [secondary] primary has no value
+  MAD 9.84394 secondary [secondary] primary has no value
+  MDL 18.0221 secondary [secondary] primary has no value
+  MGA 4591.04 secondary [secondary] primary has no value
+  MKD 54.9834 secondary [secondary] primary has no value
+  MMK 2099.33 secondary [secondary] primary has no value
+  MNT 3599.32 secondary [secondary] primary has no value
+  MOP 8.08055 secondary [secondary] primary has no value
+  MRU 40.4301 secondary [secondary] primary has no value
+  MUR 47.2952 secondary [secondary] primary has no value
+  MVR 15.475 secondary [secondary] primary has no value
+  MWK 1738.13 secondary [secondary] primary has no value
+  MXN 18.773 secondary [secondary] primary has no value
+  MYR 4.06011 secondary [secondary] primary has no value
+  MZN 63.8963 secondary [secondary] primary has no value
+  NAD 16.6842 crossPeg [pegged]
+  NGN 1347.76 secondary [secondary] primary has no value
+  NIO 36.7202 secondary [secondary] primary has no value
+  NOK 9.2038 secondary [secondary] primary has no value
+  NPR 152.082 secondary [secondary] primary has no value
+  NZD 1.77581 secondary [secondary] primary has no value
+  OMR 0.3845 peg [pegged]
+  PAB 1 peg [pegged]
+  PEN 3.46548 secondary [secondary] primary has no value
+  PGK 4.55464 secondary [secondary] primary has no value
+  PHP 63.6571 secondary [secondary] primary has no value
+  PKR 276.817 secondary [secondary] primary has no value
+  PLN 3.94673 secondary [secondary] primary has no value
+  PYG 5941.74 secondary [secondary] primary has no value
+  QAR 3.64 peg [pegged]
+  RON 4.76415 secondary [secondary] primary has no value
+  RSD 105.335 secondary [secondary] primary has no value
+  RUB 80.3126 secondary [secondary] primary has no value
+  RWF 1475.93 secondary [secondary] primary has no value
+  SAR 3.75 peg [pegged]
+  SBD 8.04969 secondary [secondary] primary has no value
+  SCR 14.3717 secondary [secondary] primary has no value
+  SDG 600.224 secondary [disputed multiRate secondary] primary has no value
+  SEK 9.82532 secondary [secondary] primary has no value
+  SGD 1.27822 secondary [secondary] primary has no value
+  SHP 0.746493 crossPeg [pegged]
+  SLE 22.9451 secondary [secondary] primary has no value
+  SOS 571.492 secondary [secondary] primary has no value
+  SRD 37.664 secondary [secondary] primary has no value
+  SSP 5745.22 secondary [multiRate secondary] primary has no value
+  STN 22.0801 secondary [secondary] primary has no value
+  SYP 121.78 carried [held] jump held: prev 121.78, new 13003.9, delta 105.782, runs 1/6
+  SZL 16.6842 crossPeg [pegged]
+  THB 33.7313 secondary [secondary] primary has no value
+  TJS 9.20884 secondary [secondary] primary has no value
+  TMT 3.5 peg [pegged]
+  TND 2.9923 secondary [secondary] primary has no value
+  TOP 2.38968 secondary [secondary] primary has no value
+  TRY 49.9531 secondary [secondary] primary has no value
+  TTD 6.75774 secondary [secondary] primary has no value
+  TWD 32.6372 secondary [secondary] primary has no value
+  TZS 2642.18 secondary [secondary] primary has no value
+  UAH 45.4641 secondary [secondary] primary has no value
+  UGX 4256 secondary [disputed secondary] primary has no value
+  USD 1 base []
+  UYU 40.1689 secondary [secondary] primary has no value
+  UZS 12007.6 secondary [secondary] primary has no value
+  VES 887.787 secondary [multiRate secondary] primary has no value
+  VND 25799 secondary [secondary] primary has no value
+  VUV 118.963 secondary [secondary] primary has no value
+  WST 2.77621 secondary [secondary] primary has no value
+  XAF 585.4633 crossPeg [pegged]
+  XCD 2.7 peg [pegged]
+  XCG 1.79 peg [pegged]
+  XOF 585.4633 crossPeg [pegged]
+  XPF 106.5075 crossPeg [pegged]
+  YER 236.182 secondary [secondary] primary has no value
+  ZAR 16.6842 secondary [secondary] primary has no value
+  ZMW 20.2367 secondary [secondary] primary has no value
+  ZWG 26.7882 secondary [multiRate secondary] primary has no value
