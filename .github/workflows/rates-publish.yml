@@ -8,6 +8,8 @@
 name: rates-publish
 
 on:
+  # Schedule re-registered 2026-11-02: the cron from the repository's
+  # initial push never fired (Ф4 log, devops task 037).
   schedule:
     - cron: "17 * * * *" # hourly publish; odd minute, the top of the hour lags most
     - cron: "47 3 1 * *" # monthly keepalive, see job keepalive
