@@ -31,8 +31,7 @@ var (
 	errRedirect = errors.New("redirect refused")
 )
 
-// StatusError reports an HTTP status other than 200 (or 304 on a
-// conditional request).
+// StatusError reports an HTTP status other than 200.
 type StatusError struct {
 	Code       int
 	RetryAfter time.Duration // zero when the header is absent or invalid
@@ -128,15 +127,13 @@ func httpsOnlyMaxRedirects(limit int) func(*http.Request, []*http.Request) error
 
 // response is a successful exchange.
 type response struct {
-	notModified bool
-	body        []byte
-	header      http.Header
+	body   []byte
+	header http.Header
 }
 
-// get performs a GET with at most one retry. A 304 is accepted only when
-// the caller sent a validator in hdr.
-func (c *Client) get(ctx context.Context, url string, hdr http.Header) (response, error) {
-	resp, retry, err := c.attempt(ctx, url, hdr)
+// get performs a GET with at most one retry.
+func (c *Client) get(ctx context.Context, url string) (response, error) {
+	resp, retry, err := c.attempt(ctx, url)
 	if err == nil || !retry {
 		return resp, err
 	}
@@ -148,19 +145,16 @@ func (c *Client) get(ctx context.Context, url string, hdr http.Header) (response
 		return response{}, fmt.Errorf("%w (retry abandoned: %w)", err, context.Cause(ctx))
 	case <-timer.C:
 	}
-	resp, _, err = c.attempt(ctx, url, hdr)
+	resp, _, err = c.attempt(ctx, url)
 	return resp, err
 }
 
 // attempt performs one request. retry reports whether the failure is
 // transient: a network error, 408 or 5xx. 429 is deliberately not retried.
-func (c *Client) attempt(ctx context.Context, url string, hdr http.Header) (_ response, retry bool, _ error) {
+func (c *Client) attempt(ctx context.Context, url string) (_ response, retry bool, _ error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return response{}, false, err
-	}
-	for k, v := range hdr {
-		req.Header[k] = v
 	}
 	req.Header.Set("User-Agent", c.userAgent)
 	req.Header.Set("Accept", "application/json")
@@ -171,15 +165,8 @@ func (c *Client) attempt(ctx context.Context, url string, hdr http.Header) (_ re
 	}
 	defer resp.Body.Close()
 
-	conditional := req.Header.Get("If-None-Match") != "" ||
-		req.Header.Get("If-Modified-Since") != ""
-	switch {
-	case resp.StatusCode == http.StatusOK:
-	case resp.StatusCode == http.StatusNotModified && conditional:
-		// Drain the (normally empty) body so the connection is reused.
-		_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, c.maxBody))
-		return response{notModified: true, header: resp.Header}, false, nil
-	default:
+	if resp.StatusCode != http.StatusOK {
+		// Drain the body so the connection is reused.
 		_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, c.maxBody))
 		se := &StatusError{
 			Code:       resp.StatusCode,

@@ -31,9 +31,8 @@ type State struct {
 
 // Source is the per-upstream memory.
 type Source struct {
-	// ETag and BodySHA256 describe the last body kept in the archive; the
-	// validator is sent only while that body is available.
-	ETag       string     `json:"etag,omitempty"`
+	// BodySHA256 identifies the last body kept in the archive, so an
+	// unchanged body is not stored again.
 	BodySHA256 string     `json:"bodySha256,omitempty"`
 	LastOkAt   rates.Time `json:"lastOkAt,omitzero"`
 	// DownSince is the first failure of the current outage.

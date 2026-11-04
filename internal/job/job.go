@@ -44,7 +44,7 @@ const (
 
 // Fetcher downloads one upstream; *source.Fetcher implements it.
 type Fetcher interface {
-	Fetch(ctx context.Context, c source.Cache) (source.Quote, error)
+	Fetch(ctx context.Context) (source.Quote, error)
 }
 
 // Config is the runtime configuration of a run.
@@ -413,9 +413,9 @@ func (r *run) fetchAll(ctx context.Context, now time.Time) fetchResult {
 			s.out.err = fmt.Errorf("cooling down until %s", formatTime(until))
 			continue
 		}
-		f, cache := fetchers[s.id], r.cacheFor(s.id)
+		f := fetchers[s.id]
 		wg.Go(func() {
-			q, err := f.Fetch(ctx, cache)
+			q, err := f.Fetch(ctx)
 			s.out.err = err
 			if err == nil {
 				s.out.quote = &q

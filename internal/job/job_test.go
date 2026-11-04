@@ -9,7 +9,6 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -24,26 +23,22 @@ import (
 	"github.com/justskiv/rates/internal/validate"
 )
 
-// fakeSource serves a scripted quote and emulates 304 for a matching ETag.
+// fakeSource serves a scripted quote and counts the fetches.
 type fakeSource struct {
 	mu    sync.Mutex
 	quote source.Quote
 	err   error
-	calls []source.Cache
+	calls int
 }
 
-func (f *fakeSource) Fetch(_ context.Context, c source.Cache) (source.Quote, error) {
+func (f *fakeSource) Fetch(context.Context) (source.Quote, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	f.calls = append(f.calls, c)
+	f.calls++
 	if f.err != nil {
 		return source.Quote{}, f.err
 	}
-	q := f.quote.Clone()
-	if c.ETag != "" && c.ETag == q.Meta.ETag && bytes.Equal(c.Body, q.Body) {
-		q.Meta.NotModified = true
-	}
-	return q, nil
+	return f.quote.Clone(), nil
 }
 
 func (f *fakeSource) set(q source.Quote, err error) {
@@ -146,7 +141,6 @@ func (wd *world) setDay(k int, eur float64) {
 	pad := bytes.Repeat([]byte(" "), k+1)
 	f := shift(wd.base[0])
 	f.Body = append(pad, f.Body...)
-	f.Meta.ETag = `"f-` + strconv.Itoa(k) + `"`
 	w := shift(wd.base[1])
 	w.Body = append(pad, w.Body...)
 	e := shift(wd.base[2])
@@ -217,7 +211,7 @@ func expectOutcome(t *testing.T, rep job.Report, outcome job.Outcome, reason str
 }
 
 // TestTenDays runs the job through ten simulated days: first publication,
-// unchanged runs, day closing, conditional fetches, every kind of abort,
+// unchanged runs, day closing, every kind of abort,
 // and checks the published tree after each step.
 func TestTenDays(t *testing.T) {
 	wd := newWorld(t)
@@ -235,19 +229,12 @@ func TestTenDays(t *testing.T) {
 		t.Fatalf("health after first run: %+v", h)
 	}
 
-	// Same data an hour later: unchanged, latest.json untouched, the
-	// primary is fetched conditionally with the archived body.
+	// Same data an hour later: unchanged, latest.json untouched.
 	time.Sleep(5 * time.Millisecond)
 	rep = wd.run(at(1, 20, 7))
 	expectOutcome(t, rep, job.OutcomeUnchanged, "")
 	if !wd.latestStat().ModTime().Equal(first.ModTime()) {
 		t.Error("unchanged run touched latest.json")
-	}
-	if c := wd.f.calls[len(wd.f.calls)-1]; c.ETag == "" || len(c.Body) == 0 {
-		t.Error("second run did not send a conditional request")
-	}
-	if !wd.health().Sources[source.Frankfurter].NotModified {
-		t.Error("304 not reported in health.json")
 	}
 
 	// Days 2-10: one new observation per day around noon, a check run
@@ -302,7 +289,6 @@ func TestTenDays(t *testing.T) {
 				delete(f.Dates, c)
 			}
 			f.Body = append([]byte("  "), f.Body...)
-			f.Meta.ETag = `"degraded"`
 			wd.f.set(f, nil)
 			rep = wd.run(at(day, 13, 17))
 			expectOutcome(t, rep, job.OutcomeAborted, "degraded")
@@ -525,13 +511,13 @@ func TestRateLimitedSourceCoolsDown(t *testing.T) {
 	wd := newWorld(t)
 	wd.e.set(source.Quote{}, &source.StatusError{Code: 429, RetryAfter: 20 * time.Minute})
 	wd.run(at(1, 19, 7))
-	calls := len(wd.e.calls)
+	calls := wd.e.calls
 	wd.run(at(1, 19, 17))
-	if len(wd.e.calls) != calls {
+	if wd.e.calls != calls {
 		t.Error("source fetched during its cooldown")
 	}
 	wd.run(at(1, 19, 37))
-	if len(wd.e.calls) != calls+1 {
+	if wd.e.calls != calls+1 {
 		t.Error("source not fetched after the cooldown")
 	}
 }

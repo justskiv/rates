@@ -37,13 +37,12 @@ type Health struct {
 
 // SourceHealth is the per-upstream part of health.json.
 type SourceHealth struct {
-	OK          bool       `json:"ok"`
-	LastOkAt    rates.Time `json:"lastOkAt,omitzero"`
-	Date        string     `json:"date,omitempty"`
-	Codes       int        `json:"codes,omitempty"`
-	NotModified bool       `json:"notModified,omitempty"`
-	EOL         *bool      `json:"eol,omitempty"`
-	Error       string     `json:"error,omitempty"`
+	OK       bool       `json:"ok"`
+	LastOkAt rates.Time `json:"lastOkAt,omitzero"`
+	Date     string     `json:"date,omitempty"`
+	Codes    int        `json:"codes,omitempty"`
+	EOL      *bool      `json:"eol,omitempty"`
+	Error    string     `json:"error,omitempty"`
 }
 
 // Counts describes the snapshot clients currently receive.

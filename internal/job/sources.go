@@ -25,28 +25,6 @@ const _maxCooldown = 6 * time.Hour
 // forbid redistribution and the archive is public in option B.
 var _archived = []source.ID{source.Frankfurter, source.Fawaz}
 
-// cacheFor returns the conditional-request cache of id: the stored
-// validator together with the archived body it belongs to.
-func (r *run) cacheFor(id source.ID) source.Cache {
-	ss := r.st.Sources[id]
-	if id != source.Frankfurter || ss.ETag == "" || ss.BodySHA256 == "" {
-		return source.Cache{}
-	}
-	gz, err := r.archive.ReadFile(lastPath(id))
-	if err != nil {
-		r.deps.Log.Debug("no archived body, fetching unconditionally",
-			slog.String("source", string(id)), slog.Any("err", err))
-		return source.Cache{}
-	}
-	body, err := publish.Gunzip(gz, source.DefaultMaxBody)
-	if err != nil || sha256Hex(body) != ss.BodySHA256 {
-		r.deps.Log.Warn("archived body does not match state, fetching unconditionally",
-			slog.String("source", string(id)))
-		return source.Cache{}
-	}
-	return source.Cache{ETag: ss.ETag, Body: body}
-}
-
 // recordSources updates state and health for every upstream after
 // screening: a source dropped by Screen counts as failed for this run.
 func (r *run) recordSources(fetched fetchResult, screened merge.Inputs, warns []merge.Warning, now time.Time) {
@@ -110,10 +88,8 @@ func (r *run) sourceOK(id source.ID, q source.Quote, now time.Time) {
 	} else {
 		h.Date = q.Date.Format(time.DateOnly)
 		h.Codes = len(q.Rates)
-		h.NotModified = q.Meta.NotModified
 		r.deps.Log.Info("source ok", slog.String("source", string(id)),
-			slog.String("date", h.Date), slog.Int("codes", h.Codes),
-			slog.Bool("notModified", h.NotModified))
+			slog.String("date", h.Date), slog.Int("codes", h.Codes))
 	}
 	r.sources[id] = h
 
@@ -152,7 +128,7 @@ func errorSummary(id source.ID, err error) string {
 }
 
 // writeArchive stores the bodies of publishable sources whose content
-// changed (not on 304) and remembers validators that now have a body.
+// changed since the last kept body.
 func (r *run) writeArchive(fetched fetchResult, now time.Time) error {
 	for _, id := range _archived {
 		q := fetched[id].quote
@@ -161,22 +137,20 @@ func (r *run) writeArchive(fetched fetchResult, now time.Time) error {
 		}
 		ss := r.st.Sources[id]
 		sum := sha256Hex(q.Body)
-		if sum != ss.BodySHA256 {
-			gz, err := publish.Gzip(q.Body)
-			if err != nil {
-				return err
-			}
-			if _, err := r.archive.Write(rawPath(id, now), gz); err != nil {
-				return err
-			}
-			if _, err := r.archive.Write(lastPath(id), gz); err != nil {
-				return err
-			}
-			ss.BodySHA256 = sum
+		if sum == ss.BodySHA256 {
+			continue
 		}
-		if id == source.Frankfurter {
-			ss.ETag = q.Meta.ETag
+		gz, err := publish.Gzip(q.Body)
+		if err != nil {
+			return err
 		}
+		if _, err := r.archive.Write(rawPath(id, now), gz); err != nil {
+			return err
+		}
+		if _, err := r.archive.Write(lastPath(id), gz); err != nil {
+			return err
+		}
+		ss.BodySHA256 = sum
 		r.st.Sources[id] = ss
 	}
 	return nil

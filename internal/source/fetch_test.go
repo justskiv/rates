@@ -61,8 +61,8 @@ func TestFetchOK(t *testing.T) {
 			http.Error(w, "anonymous user agent", http.StatusForbidden)
 			return
 		}
-		if r.Header.Get("If-None-Match") != "" {
-			t.Error("conditional request without a cached body")
+		if r.Header.Get("If-None-Match") != "" || r.Header.Get("If-Modified-Since") != "" {
+			t.Error("conditional request")
 		}
 		w.Header().Set("ETag", `"v1"`)
 		w.Header().Set("Deprecation", "@1779103800")
@@ -70,7 +70,7 @@ func TestFetchOK(t *testing.T) {
 		_, _ = w.Write(body)
 	})
 	f := source.NewFrankfurter(fastClient(), up.URL, keep(t))
-	q, err := f.Fetch(context.Background(), source.Cache{ETag: `"v0"`})
+	q, err := f.Fetch(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -78,28 +78,8 @@ func TestFetchOK(t *testing.T) {
 		t.Errorf("unexpected quote: source %s, %d rates", q.Source, len(q.Rates))
 	}
 	m := q.Meta
-	if m.ETag != `"v1"` || m.Deprecation != "@1779103800" ||
-		m.Successor != "https://api.frankfurter.dev/v3/rates" || m.NotModified {
+	if m.Deprecation != "@1779103800" || m.Successor != "https://api.frankfurter.dev/v3/rates" {
 		t.Errorf("meta %+v", m)
-	}
-}
-
-func TestFetchNotModified(t *testing.T) {
-	body := frankfurterBody(t)
-	up := newUpstream(t, func(w http.ResponseWriter, r *http.Request) {
-		if r.Header.Get("If-None-Match") == `"v1"` {
-			w.WriteHeader(http.StatusNotModified)
-			return
-		}
-		_, _ = w.Write(body)
-	})
-	f := source.NewFrankfurter(fastClient(), up.URL, keep(t))
-	q, err := f.Fetch(context.Background(), source.Cache{ETag: `"v1"`, Body: body})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !q.Meta.NotModified || q.Meta.ETag != `"v1"` || len(q.Rates) < 150 {
-		t.Errorf("304 not resolved from the cache: %+v", q.Meta)
 	}
 }
 
@@ -176,7 +156,7 @@ func TestFetchFailures(t *testing.T) {
 			},
 		},
 		{
-			name: "304 without a validator",
+			name: "304 is an error: no validator is ever sent",
 			handler: func(w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusNotModified)
 			},
@@ -200,7 +180,7 @@ func TestFetchFailures(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			up := newUpstream(t, tt.handler)
-			_, err := source.NewFrankfurter(fastClient(), up.URL, keep(t)).Fetch(context.Background(), source.Cache{})
+			_, err := source.NewFrankfurter(fastClient(), up.URL, keep(t)).Fetch(context.Background())
 			tt.check(t, err)
 			if got := up.hits.Load(); got != tt.wantHits {
 				t.Errorf("%d requests, want %d", got, tt.wantHits)
@@ -219,7 +199,7 @@ func TestFetchRetrySucceeds(t *testing.T) {
 		}
 		_, _ = w.Write(body)
 	})
-	if _, err := source.NewFrankfurter(fastClient(), up.URL, keep(t)).Fetch(context.Background(), source.Cache{}); err != nil {
+	if _, err := source.NewFrankfurter(fastClient(), up.URL, keep(t)).Fetch(context.Background()); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -230,7 +210,7 @@ func TestFetchRejectsRedirectToHTTP(t *testing.T) {
 	}))
 	defer srv.Close()
 	c := source.NewClient(source.ClientConfig{UserAgent: _ua, Transport: srv.Client().Transport})
-	_, err := source.NewFrankfurter(c, srv.URL, keep(t)).Fetch(context.Background(), source.Cache{})
+	_, err := source.NewFrankfurter(c, srv.URL, keep(t)).Fetch(context.Background())
 	if err == nil || !strings.Contains(err.Error(), "non-https") {
 		t.Errorf("err = %v, want a refused downgrade", err)
 	}
@@ -249,7 +229,7 @@ func TestFetchFawazFallsBackByDate(t *testing.T) {
 	})
 	now := func() time.Time { return time.Date(2026, 11, 2, 0, 30, 0, 0, time.UTC) }
 	f := source.NewFawaz(fastClient(), up.URL+"/npm/@fawazahmed0/currency-api", keep(t), now)
-	q, err := f.Fetch(context.Background(), source.Cache{})
+	q, err := f.Fetch(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -269,7 +249,7 @@ func TestFetchFawazFallsBackByDate(t *testing.T) {
 		paths = append(paths, r.URL.Path)
 		http.NotFound(w, r)
 	})
-	if _, err := f.Fetch(context.Background(), source.Cache{}); err == nil || len(paths) != 3 {
+	if _, err := f.Fetch(context.Background()); err == nil || len(paths) != 3 {
 		t.Errorf("err = %v after %d requests, want an error after today, yesterday, latest", err, len(paths))
 	}
 }
@@ -312,7 +292,7 @@ func TestFetchRetryDelay(t *testing.T) {
 				Transport: rt,
 				Jitter:    func() float64 { return tt.jitter },
 			})
-			if _, err := source.NewFrankfurter(c, "https://api.invalid/v2/rates", keep(t)).Fetch(t.Context(), source.Cache{}); err != nil {
+			if _, err := source.NewFrankfurter(c, "https://api.invalid/v2/rates", keep(t)).Fetch(t.Context()); err != nil {
 				t.Fatal(err)
 			}
 			if got := at[1].Sub(at[0]).Round(time.Millisecond); got != tt.want {
@@ -332,7 +312,7 @@ func TestFetchRetryHonoursContext(t *testing.T) {
 		ctx, cancel := context.WithTimeout(t.Context(), time.Second)
 		defer cancel()
 		start := time.Now()
-		_, err := source.NewFrankfurter(c, "https://api.invalid/v2/rates", keep(t)).Fetch(ctx, source.Cache{})
+		_, err := source.NewFrankfurter(c, "https://api.invalid/v2/rates", keep(t)).Fetch(ctx)
 		if err == nil || time.Since(start) != time.Second {
 			t.Errorf("err = %v after %v, want deadline after 1s", err, time.Since(start))
 		}

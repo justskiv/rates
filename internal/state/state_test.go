@@ -36,7 +36,7 @@ func TestLoadSave(t *testing.T) {
 	now := rates.NewTime(time.Date(2026, 11, 1, 19, 7, 0, 0, time.UTC))
 	st.LastRunAt = now
 	st.Sources = map[source.ID]state.Source{
-		source.Frankfurter: {ETag: `"abc"`, BodySHA256: "00ff", LastOkAt: now},
+		source.Frankfurter: {BodySHA256: "00ff", LastOkAt: now},
 	}
 	st.Merge.Pending = map[rates.Code]merge.Pending{"KZT": {Value: 544.3, Runs: 2, Since: now}}
 	if err := s.Save(st); err != nil {
