@@ -1,17 +1,17 @@
 {
   "schemaVersion": 1,
-  "lastRunAt": "2026-11-20T12:18:12Z",
+  "lastRunAt": "2026-11-20T12:58:09Z",
   "sources": {
     "exchangerate-api": {
-      "lastOkAt": "2026-11-20T12:18:12Z"
+      "lastOkAt": "2026-11-20T12:58:09Z"
     },
     "fawazahmed0": {
       "bodySha256": "26cfdaaf529939f24ef6a09b06cace37d84fa1cc262a64505fdd7a6f1b4ea7bc",
-      "lastOkAt": "2026-11-20T12:18:12Z"
+      "lastOkAt": "2026-11-20T12:58:09Z"
     },
     "frankfurter": {
-      "bodySha256": "9526117f335031f9cc6dc35e6469aa8bf604d5c7c192dfd8cfef6a7c50103ca7",
-      "lastOkAt": "2026-11-20T12:18:12Z"
+      "bodySha256": "362cff52ba3414f5a06e4d414c15d4c83eee750d204132ccc28b105d1054fe31",
+      "lastOkAt": "2026-11-20T12:58:09Z"
     }
   },
   "merge": {}
